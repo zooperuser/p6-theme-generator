@@ -1,5 +1,5 @@
 """
-Nuitka Compiler Script for Mood Palette Generator
+Nuitka Compiler Script for Image Palette Generator
 Creates a true native executable using Nuitka compiler
 """
 
