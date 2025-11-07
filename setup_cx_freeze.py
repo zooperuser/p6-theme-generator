@@ -1,5 +1,5 @@
 """
-cx_Freeze setup script for Mood Palette Generator
+cx_Freeze setup script for Image Palette Generator
 Alternative approach to PyInstaller for creating portable executable
 """
 
@@ -92,10 +92,10 @@ target = Executable(
 )
 
 setup(
-    name="Mood Palette Generator",
+    name="Image Palette Generator",
     version="1.0.0",
-    description="AI-powered mood palette generator with LM Studio integration",
-    author="Mood Palette Team",
+    description="AI-powered image palette generator",
+    author="Image Palette Team",
     options={"build_exe": build_exe_options},
     executables=[target]
 )

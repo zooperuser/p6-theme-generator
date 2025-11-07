@@ -1329,4 +1329,5 @@ if __name__ == "__main__":
             prevent_thread_lock=False  # Keep blocking so process lifetime matches Electron expectation
         )
     else:
-        ui.launch()
+        # Enable a public Gradio share link when running locally
+        ui.launch(share=True)

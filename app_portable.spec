@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec file for Mood Palette Generator
+PyInstaller spec file for Image Palette Generator
 Creates a portable executable with all dependencies bundled
 """
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
-<#
+<#!
 .SYNOPSIS
-    Portable Mood Palette Generator Launcher
+    Portable Image Palette Generator Launcher
 
 .DESCRIPTION
-    This launcher script helps run the portable Mood Palette Generator.
+    This launcher script helps run the portable Image Palette Generator.
     It sets up the environment and handles common issues.
 
 .PARAMETER Debug
@@ -23,9 +23,9 @@ $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Set console title
-$Host.UI.RawUI.WindowTitle = "Mood Palette Generator (Portable)"
+$Host.UI.RawUI.WindowTitle = "Image Palette Generator (Portable)"
 
-Write-Host "=== Mood Palette Generator (Portable) ===" -ForegroundColor Cyan
+Write-Host "=== Image Palette Generator (Portable) ===" -ForegroundColor Cyan
 Write-Host "Version: Portable Build" -ForegroundColor Yellow
 Write-Host "Starting application..." -ForegroundColor Green
 
@@ -95,7 +95,7 @@ if (-not $env:LM_STUDIO_BASE_URL) {
 }
 
 # Create a log file for this session
-$logFile = Join-Path $env:APPDATA_OVERRIDE "mood_palette_log.txt"
+$logFile = Join-Path $env:APPDATA_OVERRIDE "image_palette_log.txt"
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
 # Function to write to log
@@ -105,7 +105,7 @@ function Write-Log {
     Add-Content -Path $logFile -Value $logEntry -ErrorAction SilentlyContinue
 }
 
-Write-Log "Starting Mood Palette Generator Portable"
+Write-Log "Starting Image Palette Generator Portable"
 Write-Log "Executable: $($exeFile.FullName)"
 Write-Log "Working Directory: $ScriptDir"
 Write-Log "Data Directory: $env:APPDATA_OVERRIDE"
