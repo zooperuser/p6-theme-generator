@@ -15,6 +15,8 @@ env/
 # Environment files
 .env
 .env.*.local
+.env.local
+.envrc
 
 # Build artifacts (Python)
 build/
@@ -50,3 +52,16 @@ Thumbs.db
 *.tar
 *.tar.gz
 *.tmp
+
+# Certificates / keys (never commit secrets)
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.pfx
+*.p12
+*.jks
+*.keystore
+*.asc
+*.gpg
