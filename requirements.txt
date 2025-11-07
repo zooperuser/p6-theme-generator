@@ -1,0 +1,5 @@
+
+# Python 3.13 compatible dependencies
+gradio==5.44.1
+numpy>=1.26.0,<3.0.0
+Pillow>=10.4.0
