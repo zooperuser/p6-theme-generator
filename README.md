@@ -3,12 +3,12 @@
 This app generates color palettes from uploaded images. It focuses on:
 
 - Random image pixel palettes (perceptually weighted sampling + LAB k-means)
-- A mirrored “painting-style” variant using the same colors
+- A chaotic “painting-style” variant using the same colors
 
 ## Features
 
 - Upload an image and generate a palette from random pixels (adjustable count)
-- Mirrored “painting-style” palette (reordered colors for visual balance)
+- Chaotic “painting-style” palette (reordered colors for visual balance)
 - Copyable hex codes and recommended text colors for both palettes
 
 ## Prerequisites
