@@ -60,7 +60,7 @@ Then open the local Gradio URL printed in the console (e.g. <http://127.0.0.1:78
    - If you still see this, ensure you're on the pinned Gradio version in `requirements.txt` and restart the app.
 
 
-## 9. License & Attribution
+## 7. License & Attribution
 
 Original concept & color logic adapted from public color palette ideas.
 This adaptation is provided for local/offline experimentation.
