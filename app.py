@@ -1,11 +1,9 @@
 import os
-import warnings
 import re
 import numpy as np
 import gradio as gr
 from PIL import Image
 from datetime import datetime, UTC
-from gradio.themes import Soft
 
 class Config:
     """Minimal configuration for the app."""
@@ -50,51 +48,7 @@ class StripBrotliMiddleware:
             pass
         return await self.app(scope, receive, send)
 
-# -------------------------------------------------
-# 3. Color Data (verbatim from original concept)
-# -------------------------------------------------
-
-COLOR_DATA = [
-    {"name": "Crimson", "hex": "#DC143C", "description": "A deep, rich red color, leaning slightly towards purple."},
-    {"name": "Scarlet", "hex": "#FF2400", "description": "A brilliant, vivid red with a hint of orange."},
-    {"name": "Coral", "hex": "#FF7F50", "description": "A vibrant pinkish-orange reminiscent of marine invertebrates."},
-    {"name": "Tangerine", "hex": "#F28500", "description": "A saturated, zesty orange, like the ripe citrus fruit."},
-    {"name": "Gold", "hex": "#FFD700", "description": "A bright, metallic yellow associated with wealth and luxury."},
-    {"name": "Lemon Chiffon", "hex": "#FFFACD", "description": "A pale, light yellow, as soft and airy as the dessert."},
-    {"name": "Lime Green", "hex": "#32CD32", "description": "A bright green color, evoking freshness and zesty energy."},
-    {"name": "Forest Green", "hex": "#228B22", "description": "A dark, shaded green, like the canopy of a dense forest."},
-    {"name": "Teal", "hex": "#008080", "description": "A medium blue-green color, often seen as sophisticated and calming."},
-    {"name": "Cyan", "hex": "#00FFFF", "description": "A vibrant greenish-blue, one of the primary subtractive colors."},
-    {"name": "Sky Blue", "hex": "#87CEEB", "description": "A light, pale blue, like the color of a clear daytime sky."},
-    {"name": "Royal Blue", "hex": "#4169E1", "description": "A deep, vivid blue that is both rich and bright."},
-    {"name": "Indigo", "hex": "#4B0082", "description": "A deep, rich color between blue and violet in the spectrum."},
-    {"name": "Lavender", "hex": "#E6E6FA", "description": "A light, pale purple with a bluish hue, named after the flower."},
-    {"name": "Plum", "hex": "#DDA0DD", "description": "A reddish-purple color, like the ripe fruit it's named after."},
-    {"name": "Magenta", "hex": "#FF00FF", "description": "A purplish-red color that lies between red and violet."},
-    {"name": "Hot Pink", "hex": "#FF69B4", "description": "A bright, vivid pink that is both bold and energetic."},
-    {"name": "Ivory", "hex": "#FFFFF0", "description": "An off-white color that resembles the material from tusks and teeth."},
-    {"name": "Beige", "hex": "#F5F5DC", "description": "A pale sandy fawn color, often used as a warm, neutral tone."},
-    {"name": "Taupe", "hex": "#483C32", "description": "A dark grayish-brown or brownish-gray color."},
-    {"name": "Slate Gray", "hex": "#708090", "description": "A medium gray with a slight blue tinge, like the metamorphic rock."},
-    {"name": "Charcoal", "hex": "#36454F", "description": "A dark, almost black gray, like burnt wood."},
-    {"name": "Onyx", "hex": "#353839", "description": "A deep, rich black, often with a subtle hint of dark blue."},
-    {"name": "Emerald", "hex": "#50C878", "description": "A brilliant green, named after the precious gemstone."},
-    {"name": "Sapphire", "hex": "#0F52BA", "description": "A deep, lustrous blue, reminiscent of the valuable gemstone."},
-    {"name": "Ruby", "hex": "#E0115F", "description": "A deep red color, inspired by the gemstone of the same name."},
-    {"name": "Amethyst", "hex": "#9966CC", "description": "A moderate, violet-purple color, like the quartz gemstone."},
-    {"name": "Peridot", "hex": "#E6E200", "description": "A light olive-green or yellowish-green, named for the gem."},
-    {"name": "Turquoise", "hex": "#40E0D0", "description": "A greenish-blue color, often associated with tropical waters."},
-    {"name": "Silver", "hex": "#C0C0C0", "description": "A metallic gray color that resembles polished silver."},
-    {"name": "Bronze", "hex": "#CD7F32", "description": "A metallic brown color that resembles the alloy of copper and tin."},
-    {"name": "Obsidian", "hex": "#000000", "description": "A pure, deep black, like the volcanic glass formed from cooled lava."},
-]
-
-
-# -------------------------------------------------
-# 4. Core Logic
-# -------------------------------------------------
-
-class MoodPaletteGenerator:
+class ImagePaletteGenerator:
     def _format_chaotic_palette(
         self,
         hex_colors: list[str],
@@ -225,31 +179,8 @@ class MoodPaletteGenerator:
         ordered = [hex_colors[i] for i in positions if i is not None]
         html = self._format_custom_palette(ordered, title=title)
         return html, ordered
-    def __init__(self, config: Config, color_data: list[dict]):
+    def __init__(self, config: Config):
         self.config = config
-        self.color_data = color_data
-
-    # LM Studio discovery removed
-
-    # --- Model listing and selection for UI ---
-    # LM Studio model listing removed
-
-    # Vision heuristics removed
-
-    # Model list removed
-
-    # Text model control removed
-
-    # Text model getter removed
-
-    # ---------------- Log Migration & Parsing Helpers ----------------
-    # Prompt parsing removed
-
-    # Log migration removed
-
-    # Precompute removed
-
-    # Embedding precompute removed
 
     def _get_text_color_for_bg(self, hex_color: str) -> str:
         hex_color = hex_color.lstrip('#')
@@ -259,10 +190,6 @@ class MoodPaletteGenerator:
             return '#000000' if luminance > 150 else '#FFFFFF'
         except Exception:
             return '#000000'
-
-    # Mood palette formatting removed
-
-    # Dynamic CSS removed
 
     # --- Custom palette formatting (for image-based random pixels) ---
     def _format_custom_palette(self, hex_colors: list[str], title: str = "Random Image Pixels") -> str:
@@ -648,7 +575,7 @@ class MoodPaletteGenerator:
 # 5. UI
 # -------------------------------------------------
 
-def create_ui(generator: MoodPaletteGenerator):
+def create_ui(generator: ImagePaletteGenerator):
     # Helper to shorten prompt labels for dropdown (kept for future use)
     def _short_label(text, maxlen=75):
         t = (text or "").replace("\n", " ").strip()
@@ -657,19 +584,159 @@ def create_ui(generator: MoodPaletteGenerator):
     def _noop():
         return None
 
-    with gr.Blocks(theme=Soft()) as demo:
+    with gr.Blocks() as demo:
         gr.HTML(
             """
             <style>
+            @keyframes twinkle {
+                0%, 100% { opacity: 0.3; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.2); }
+            }
+            
+            @keyframes shootingStar1 {
+                0% {
+                    transform: translateX(-100px) translateY(0);
+                    opacity: 0;
+                }
+                5% { opacity: 1; }
+                95% { opacity: 1; }
+                100% {
+                    transform: translateX(calc(100vw + 100px)) translateY(0);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes shootingStar2 {
+                0% {
+                    transform: translateX(calc(100vw + 100px)) translateY(0);
+                    opacity: 0;
+                }
+                5% { opacity: 1; }
+                95% { opacity: 1; }
+                100% {
+                    transform: translateX(-100px) translateY(0);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes shootingStar3 {
+                0% {
+                    transform: translateX(-100px) translateY(0);
+                    opacity: 0;
+                }
+                10% { opacity: 1; }
+                90% { opacity: 1; }
+                100% {
+                    transform: translateX(calc(100vw + 100px)) translateY(0);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+            }
+            
+            @keyframes pulse-glow {
+                0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+                50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.7); }
+            }
+            
+            @keyframes shimmer {
+                0% { background-position: -100% 0; }
+                100% { background-position: 200% 0; }
+            }
+            
             :root {
                 --palette-bar-height: 56px;
                 --palette-count: 15;
+                --gold-1: #FFD700;
+                --gold-2: #FFA500;
+                --gold-3: #DAA520;
+                --gold-4: #B8860B;
+            }
+            
+            body {
+                background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+                position: relative;
+                overflow-x: hidden;
+            }
+            
+            body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                background-image:
+                    radial-gradient(2px 2px at 20% 30%, rgba(255, 215, 0, 0.8), transparent),
+                    radial-gradient(2px 2px at 60% 70%, rgba(255, 215, 0, 0.6), transparent),
+                    radial-gradient(1px 1px at 50% 50%, rgba(255, 215, 0, 0.7), transparent),
+                    radial-gradient(1px 1px at 80% 10%, rgba(255, 215, 0, 0.5), transparent),
+                    radial-gradient(2px 2px at 90% 60%, rgba(255, 215, 0, 0.8), transparent),
+                    radial-gradient(1px 1px at 33% 80%, rgba(255, 215, 0, 0.6), transparent),
+                    radial-gradient(2px 2px at 15% 90%, rgba(255, 215, 0, 0.7), transparent);
+                background-size: 200% 200%, 300% 300%, 250% 250%, 280% 280%, 220% 220%, 260% 260%, 240% 240%;
+                animation: twinkle 3s ease-in-out infinite;
+                z-index: 1;
+            }
+            
+            body::after {
+                content: '';
+                position: fixed;
+                top: 15%;
+                left: 0;
+                width: 80px;
+                height: 2px;
+                background: linear-gradient(to right, transparent, rgba(255, 215, 0, 0.9), rgba(255, 215, 0, 0.6), transparent);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.9), 0 0 30px rgba(255, 215, 0, 0.7);
+                border-radius: 50%;
+                animation: shootingStar1 4s ease-in-out infinite;
+                z-index: 1;
+            }
+            
+            .gradio-container::before {
+                content: '';
+                position: fixed;
+                top: 45%;
+                right: 0;
+                width: 100px;
+                height: 2px;
+                background: linear-gradient(to left, transparent, rgba(255, 215, 0, 0.9), rgba(255, 215, 0, 0.6), transparent);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.9), 0 0 30px rgba(255, 215, 0, 0.7);
+                border-radius: 50%;
+                animation: shootingStar2 5s ease-in-out 1s infinite;
+                z-index: 1;
+                pointer-events: none;
+            }
+            
+            .gradio-container::after {
+                content: '';
+                position: fixed;
+                top: 75%;
+                left: 0;
+                width: 90px;
+                height: 2px;
+                background: linear-gradient(to right, transparent, rgba(255, 215, 0, 0.85), rgba(255, 215, 0, 0.55), transparent);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.85), 0 0 30px rgba(255, 215, 0, 0.65);
+                border-radius: 50%;
+                animation: shootingStar3 3.5s ease-in-out 2s infinite;
+                z-index: 1;
+                pointer-events: none;
+            }
+            
+            .gradio-container {
+                position: relative;
+                z-index: 2;
             }
 
             #main_layout {
                 gap: 28px;
                 margin: 18px 28px 32px;
                 align-items: flex-start;
+                position: relative;
             }
 
             #visual_panel {
@@ -680,8 +747,16 @@ def create_ui(generator: MoodPaletteGenerator):
                 position: relative;
                 overflow: hidden;
                 border-radius: 22px;
-                background: linear-gradient(145deg, rgba(17, 25, 40, 0.7), rgba(30, 41, 59, 0.3));
-                box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+                background: linear-gradient(145deg, rgba(27, 39, 53, 0.9), rgba(15, 20, 30, 0.85));
+                box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5), 0 0 80px rgba(255, 215, 0, 0.3), inset 0 0 60px rgba(255, 215, 0, 0.1);
+                transition: all 0.3s ease;
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 215, 0, 0.3);
+            }
+            
+            #image_palette_group:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6), 0 0 100px rgba(255, 215, 0, 0.5), inset 0 0 80px rgba(255, 215, 0, 0.15);
             }
 
             #image_palette_group .gr-image {
@@ -731,12 +806,13 @@ def create_ui(generator: MoodPaletteGenerator):
                 font-weight: 600;
                 letter-spacing: 0.06em;
                 text-transform: uppercase;
-                color: rgba(24, 31, 52, 0.85);
+                color: rgba(255, 215, 0, 0.9);
+                text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
             }
 
             #random_palette_html .palette-title {
-                color: rgba(255, 255, 255, 0.78);
-                text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+                color: rgba(255, 215, 0, 1);
+                text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 1px 3px rgba(0, 0, 0, 0.55);
             }
 
             .palette-progress-bar {
@@ -761,8 +837,25 @@ def create_ui(generator: MoodPaletteGenerator):
                 padding: 0 6px;
                 text-align: center;
                 text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-                transition: transform 0.18s ease, filter 0.18s ease;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 border-right: 1px solid rgba(255, 255, 255, 0.25);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .palette-segment::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                transition: left 0.5s ease;
+            }
+            
+            .palette-segment:hover::before {
+                left: 100%;
             }
 
             .palette-segment:last-child {
@@ -775,8 +868,10 @@ def create_ui(generator: MoodPaletteGenerator):
             }
 
             .palette-segment:hover {
-                transform: translateY(-2px);
-                filter: brightness(1.05);
+                transform: translateY(-4px) scale(1.05);
+                filter: brightness(1.15) saturate(1.2);
+                z-index: 10;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
             }
 
             .palette-segment:hover span {
@@ -790,20 +885,34 @@ def create_ui(generator: MoodPaletteGenerator):
                 font-size: 0.92rem;
             }
             #chaotic_palette_container .palette-progress-wrapper {
-                background: rgba(248, 250, 252, 0.84);
+                background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 20, 0.9));
                 border-radius: 22px;
                 padding: 22px 24px 26px;
-                box-shadow: 0 24px 40px rgba(15, 23, 42, 0.12);
+                box-shadow: 0 24px 40px rgba(0, 0, 0, 0.4), 0 0 60px rgba(255, 215, 0, 0.25), inset 0 0 40px rgba(255, 215, 0, 0.1);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 215, 0, 0.4);
+                transition: all 0.3s ease;
+            }
+            
+            #chaotic_palette_container .palette-progress-wrapper:hover {
+                box-shadow: 0 28px 50px rgba(0, 0, 0, 0.5), 0 0 80px rgba(255, 215, 0, 0.4), inset 0 0 60px rgba(255, 215, 0, 0.15);
+                transform: translateY(-2px);
             }
 
             @media (prefers-color-scheme: dark) {
                 #chaotic_palette_container .palette-progress-wrapper {
-                    background: rgba(21, 24, 34, 0.72);
-                    box-shadow: 0 26px 44px rgba(2, 6, 23, 0.45);
+                    background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(15, 15, 15, 0.9));
+                    box-shadow: 0 26px 44px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.3);
+                    border: 1px solid rgba(255, 215, 0, 0.4);
+                }
+                
+                #chaotic_palette_container .palette-progress-wrapper:hover {
+                    box-shadow: 0 30px 54px rgba(0, 0, 0, 0.7), 0 0 80px rgba(255, 215, 0, 0.45);
                 }
 
                 .palette-title {
-                    color: rgba(229, 231, 235, 0.82);
+                    color: rgba(255, 215, 0, 1);
+                    text-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
                 }
             }
 
@@ -833,17 +942,42 @@ def create_ui(generator: MoodPaletteGenerator):
             }
 
             .control-card {
-                background: rgba(255, 255, 255, 0.78);
+                background: linear-gradient(135deg, rgba(30, 30, 30, 0.92), rgba(20, 20, 20, 0.88));
                 border-radius: 22px;
                 padding: 22px 24px;
-                box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
-                backdrop-filter: blur(14px);
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 40px rgba(255, 215, 0, 0.2), inset 0 0 30px rgba(255, 215, 0, 0.05);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 215, 0, 0.3);
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .control-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+                animation: shimmer 3s infinite;
+            }
+            
+            .control-card:hover {
+                box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.35), inset 0 0 40px rgba(255, 215, 0, 0.08);
+                transform: translateY(-2px);
             }
 
             @media (prefers-color-scheme: dark) {
                 .control-card {
-                    background: rgba(17, 20, 32, 0.78);
-                    box-shadow: 0 26px 54px rgba(2, 6, 23, 0.48);
+                    background: linear-gradient(135deg, rgba(25, 25, 25, 0.95), rgba(15, 15, 15, 0.92));
+                    box-shadow: 0 26px 54px rgba(0, 0, 0, 0.6), 0 0 50px rgba(255, 215, 0, 0.25);
+                    border: 1px solid rgba(255, 215, 0, 0.35);
+                }
+                
+                .control-card:hover {
+                    box-shadow: 0 30px 64px rgba(0, 0, 0, 0.7), 0 0 70px rgba(255, 215, 0, 0.4);
                 }
             }
 
@@ -853,31 +987,93 @@ def create_ui(generator: MoodPaletteGenerator):
 
             .control-row button,
             .control-row .gr-button {
-                height: 46px;
+                min-height: 46px;
                 border-radius: 14px !important;
                 font-weight: 600;
                 letter-spacing: 0.03em;
+                white-space: normal !important;
+                padding-inline: 14px;
+                background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #DAA520 100%) !important;
+                color: #000 !important;
+                border: none !important;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                position: relative;
+                overflow: hidden;
+                text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+            }
+            
+            .control-row button::before,
+            .control-row .gr-button::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.4);
+                transform: translate(-50%, -50%);
+                transition: width 0.6s, height 0.6s;
+            }
+            
+            .control-row button:hover::before,
+            .control-row .gr-button:hover::before {
+                width: 300px;
+                height: 300px;
+            }
+            
+            .control-row button:hover,
+            .control-row .gr-button:hover {
+                transform: translateY(-2px) scale(1.02);
+                box-shadow: 0 10px 30px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.3) !important;
+                background: linear-gradient(135deg, #FFA500 0%, #FFD700 50%, #FFA500 100%) !important;
+            }
+            
+            .control-row button:active,
+            .control-row .gr-button:active {
+                transform: translateY(0) scale(0.98);
             }
 
             .segment-button-row {
                 display: flex !important;
+                flex-wrap: wrap;
                 gap: 0 !important;
                 border-radius: 14px;
                 overflow: hidden;
-                box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
-                background: rgba(255, 255, 255, 0.85);
+                box-shadow: 0 16px 34px rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 215, 0, 0.25);
+                background: linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(25, 25, 25, 0.9));
+                border: 1px solid rgba(255, 215, 0, 0.3);
             }
 
             .segment-button-row > div {
                 flex: 1 1 0;
                 display: flex;
+                min-width: 0;
             }
 
             .segment-button-row button {
-                flex: 1 1 0;
+                flex: 1 1 auto;
                 border-radius: 0 !important;
                 border: none !important;
-                height: 46px;
+                min-height: 46px;
+                white-space: normal !important;
+                padding-inline: 14px;
+                background: transparent !important;
+                transition: all 0.3s ease !important;
+                position: relative;
+                color: rgba(255, 215, 0, 0.9) !important;
+            }
+            
+            .segment-button-row button:hover {
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(218, 165, 32, 0.2)) !important;
+                transform: scale(1.05);
+                z-index: 2;
+                color: rgba(255, 215, 0, 1) !important;
+                text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            }
+            
+            .segment-button-row button:active {
+                transform: scale(0.95);
             }
 
             .segment-button-row > div:not(:last-child) button {
@@ -886,12 +1082,17 @@ def create_ui(generator: MoodPaletteGenerator):
 
             @media (prefers-color-scheme: dark) {
                 .segment-button-row {
-                    background: rgba(17, 24, 39, 0.85);
-                    box-shadow: 0 20px 40px rgba(2, 6, 23, 0.45);
+                    background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(15, 15, 15, 0.9));
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3);
+                    border: 1px solid rgba(255, 215, 0, 0.4);
+                }
+                
+                .segment-button-row button:hover {
+                    background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(218, 165, 32, 0.3)) !important;
                 }
 
                 .segment-button-row > div:not(:last-child) button {
-                    border-right: 1px solid rgba(148, 163, 184, 0.24) !important;
+                    border-right: 1px solid rgba(255, 215, 0, 0.2) !important;
                 }
             }
 
@@ -920,6 +1121,11 @@ def create_ui(generator: MoodPaletteGenerator):
                 font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
+                background: linear-gradient(135deg, #FFD700, #FFA500, #DAA520);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.3));
             }
 
             #rand_count_slider .gr-slider {
@@ -929,6 +1135,16 @@ def create_ui(generator: MoodPaletteGenerator):
             #palette_data_section .gr-textbox textarea {
                 height: 70px !important;
                 font-family: "JetBrains Mono", Consolas, monospace;
+                border-radius: 12px !important;
+                border: 2px solid rgba(255, 215, 0, 0.3) !important;
+                transition: all 0.3s ease !important;
+                background: rgba(20, 20, 20, 0.5) !important;
+                color: rgba(255, 215, 0, 0.9) !important;
+            }
+            
+            #palette_data_section .gr-textbox textarea:focus {
+                border-color: rgba(255, 215, 0, 0.6) !important;
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1) !important;
             }
 
             #palette_data_section button {
@@ -997,10 +1213,6 @@ def create_ui(generator: MoodPaletteGenerator):
                         elem_classes=["hidden-textstore"],
                     )
 
-                    with gr.Row(elem_classes=["segment-button-row"], elem_id="hex_copy_row"):
-                        copy_rand_hex_btn = gr.Button("Copy Color Progression", elem_id="copy_rand_hex_btn")
-                        copy_chaotic_hex_btn = gr.Button("Copy Awesome Palette", elem_id="copy_chaotic_hex_btn")
-
                     rand_font_box = gr.Textbox(
                         label="",
                         show_label=False,
@@ -1024,22 +1236,23 @@ def create_ui(generator: MoodPaletteGenerator):
                         elem_classes=["hidden-textstore"],
                     )
 
-                    with gr.Row(elem_classes=["segment-button-row"], elem_id="font_copy_row"):
+                    with gr.Row(elem_classes=["segment-button-row"], elem_id="progression_copy_row"):
+                        copy_rand_hex_btn = gr.Button("Copy Color Progression", elem_id="copy_rand_hex_btn")
                         copy_rand_font_btn = gr.Button("Copy Progression Text", elem_id="copy_rand_font_btn")
+                    
+                    with gr.Row(elem_classes=["segment-button-row"], elem_id="awesome_copy_row"):
+                        copy_chaotic_hex_btn = gr.Button("Copy Awesome Palette", elem_id="copy_chaotic_hex_btn")
                         copy_chaotic_font_btn = gr.Button("Copy Awesome Text", elem_id="copy_chaotic_font_btn")
 
                 with gr.Group(elem_classes=["control-card"], elem_id="raw_hex_section"):
                     gr.Markdown("**Manual Palette Builder**")
                     with gr.Row(elem_classes=["control-row"], elem_id="raw_hex_row_input"):
-                        with gr.Column(scale=2):
-                            raw_hex_input = gr.Textbox(
-                                label="Raw Hex Codes (no #, any separators)",
-                                lines=4,
-                                placeholder="e.g. FF0000 00FF00 0000FF ...",
-                                elem_id="raw_hex_input_box",
-                            )
-                        with gr.Column(scale=1):
-                            process_raw_btn = gr.Button("Process", elem_id="process_raw_hex_btn")
+                        raw_hex_input = gr.Textbox(
+                            label="Raw Hex Codes (no #, any separators)",
+                            lines=4,
+                            placeholder="e.g. FF0000 00FF00 0000FF ...",
+                            elem_id="raw_hex_input_box",
+                        )
                     with gr.Row(elem_classes=["control-row"], elem_id="raw_hex_row_outputs"):
                         with gr.Column(scale=1):
                             raw_hex_output_hex = gr.Textbox(
@@ -1059,7 +1272,7 @@ def create_ui(generator: MoodPaletteGenerator):
 
         # --- End of component definitions ---
 
-        # No mood-based generation in minimal UI
+        # Minimal UI for image-based palette generation
 
         def random_from_image(image: Image.Image | None, n: int):
             html, hex_csv, hex_csv_reversed, font_csv, font_csv_reversed, chaotic_html, chaotic_hex_csv, chaotic_font_csv = generator.generate_random_palette_from_image(
@@ -1227,26 +1440,50 @@ def create_ui(generator: MoodPaletteGenerator):
         )
 
         def _process_raw_hex(raw: str):
+            """Process manual palette input supporting hex codes and RGB(r,g,b) entries.
+
+            Accepts:
+            - Hex codes: #RRGGBB or RRGGBB (case-insensitive)
+            - RGB tuples: RGB(r, g, b) with 0-255 components (case-insensitive, optional whitespace)
+            Preserves first-seen order and removes duplicates.
+            Returns two comma-separated strings: hex codes and recommended font colors.
+            """
             if not raw:
                 return "", ""
-            # Extract 6-hex sequences, accept both with and without leading '#'
-            tokens = re.findall(r"[0-9A-Fa-f]{6}", raw)
-            seen = set()
-            ordered = []
-            for t in tokens:
-                up = t.upper()
-                if up not in seen:
-                    seen.add(up)
-                    ordered.append(up)
-            hexes = [f"#{t}" for t in ordered]
-            fonts = [generator._get_text_color_for_bg(h) for h in hexes]
-            return ", ".join(hexes), ", ".join(fonts)
 
-        process_raw_btn.click(
-            fn=_process_raw_hex,
-            inputs=[raw_hex_input],
-            outputs=[raw_hex_output_hex, raw_hex_output_font],
-        )
+            pattern = re.compile(r"(?i)#?([0-9a-f]{6})|rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)")
+            seen: set[str] = set()
+            ordered: list[str] = []
+
+            for m in pattern.finditer(raw):
+                hex_part = m.group(1)
+                if hex_part:
+                    code = hex_part.upper()
+                    full = f"#{code}"
+                    if full not in seen:
+                        seen.add(full)
+                        ordered.append(full)
+                    continue
+
+                r_str, g_str, b_str = m.group(2), m.group(3), m.group(4)
+                if r_str is not None and g_str is not None and b_str is not None:
+                    try:
+                        r, g, b = int(r_str), int(g_str), int(b_str)
+                        if not (0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255):
+                            continue
+                        full = f"#{r:02X}{g:02X}{b:02X}"
+                        if full not in seen:
+                            seen.add(full)
+                            ordered.append(full)
+                    except Exception:
+                        continue
+
+            if not ordered:
+                return "", ""
+
+            fonts = [generator._get_text_color_for_bg(h) for h in ordered]
+            return ", ".join(ordered), ", ".join(fonts)
+
         raw_hex_input.change(
             fn=_process_raw_hex,
             inputs=[raw_hex_input],
@@ -1298,7 +1535,7 @@ def create_ui(generator: MoodPaletteGenerator):
 
 if __name__ == "__main__":
     cfg = Config()
-    gen = MoodPaletteGenerator(cfg, COLOR_DATA)
+    gen = ImagePaletteGenerator(cfg)
     ui = create_ui(gen)
     try:
         # Attach middleware to underlying FastAPI app before launch
