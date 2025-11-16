@@ -52,10 +52,6 @@ Then open the local Gradio URL printed in the console (e.g. <http://127.0.0.1:78
 3. Click "Generate" to produce the random palette (left) and the mirrored palette (right).
    - The image palette updates automatically when you change the image.
 
-### Notes
-
-- The image display height is constrained to match the approximate height of 15 stacked color cards so the palettes and image align visually.
-
 ## 6. Troubleshooting
 
 - h11 LocalProtocolError: Too little data for declared Content-Length
@@ -63,16 +59,8 @@ Then open the local Gradio URL printed in the console (e.g. <http://127.0.0.1:78
    - This app proactively disables brotli by stripping `br` from `Accept-Encoding` via a tiny middleware.
    - If you still see this, ensure you're on the pinned Gradio version in `requirements.txt` and restart the app.
 
-## 7. Differences vs Original
 
-- Removed all mood-based and LM Studio features
-- Focused UI on image upload + palettes + copy buttons
-
-## 8. Extensibility
-
-The palette pipeline is self-contained (NumPy + Pillow). You can tune sampling weights or clustering iterations in `app.py`.
-
-## 9. License & Attribution
+## 7. License & Attribution
 
 Original concept & color logic adapted from public color palette ideas.
 This adaptation is provided for local/offline experimentation.
