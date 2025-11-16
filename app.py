@@ -562,14 +562,6 @@ class ImagePaletteGenerator:
         except Exception as e:
             return f"<div class='palette-empty'>Failed to analyze image colors: {e}</div>", "", "", "", "", "", "", ""
 
-    # Semantic search removed
-
-    # Mood generation removed
-
-    # Clear removed
-
-    # Logging helpers removed (mood features removed)
-
 
 # -------------------------------------------------
 # 5. UI

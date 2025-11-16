@@ -28,27 +28,6 @@ try:
 except:
     pass
 
-# Transformers data files (for BLIP fallback)
-try:
-    transformers_datas = collect_data_files('transformers')
-    datas.extend(transformers_datas)
-except:
-    pass
-
-# Tokenizers data files
-try:
-    tokenizers_datas = collect_data_files('tokenizers')
-    datas.extend(tokenizers_datas)
-except:
-    pass
-
-# Hugging Face Hub data files
-try:
-    hf_hub_datas = collect_data_files('huggingface_hub')
-    datas.extend(hf_hub_datas)
-except:
-    pass
-
 # PIL/Pillow data files
 try:
     pil_datas = collect_data_files('PIL')
@@ -106,18 +85,8 @@ try:
 except:
     pass
 
-# Common ML/AI hidden imports
+# Common dependencies
 hiddenimports.extend([
-    'transformers',
-    'transformers.models',
-    'transformers.models.blip',
-    'transformers.models.blip.modeling_blip',
-    'transformers.models.blip.configuration_blip',
-    'transformers.models.blip.processing_blip',
-    'transformers.pipelines',
-    'transformers.pipelines.image_to_text',
-    'torch',
-    'torchvision',
     'numpy',
     'PIL',
     'PIL.Image',
@@ -165,6 +134,9 @@ a = Analysis(
         'sklearn',
         'tensorflow',
         'keras',
+        'torch',
+        'torchvision',
+        'transformers',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -182,7 +154,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='MoodPaletteGenerator',
+    name='ImagePaletteGenerator',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -203,5 +175,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='MoodPaletteGenerator',
+    name='ImagePaletteGenerator',
 )

@@ -36,14 +36,14 @@ Set-Location $ScriptDir
 $exeFile = $null
 $searchPaths = @(
     $ScriptDir,
-    (Join-Path $ScriptDir "MoodPaletteGenerator"),
+    (Join-Path $ScriptDir "ImagePaletteGenerator"),
     (Join-Path $ScriptDir "dist"),
-    (Join-Path $ScriptDir "dist\MoodPaletteGenerator")
+    (Join-Path $ScriptDir "dist\ImagePaletteGenerator")
 )
 
 foreach ($path in $searchPaths) {
     if (Test-Path $path) {
-        $found = Get-ChildItem -Path $path -Filter "*.exe" -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "*Mood*" -or $_.Name -like "*app*" } | Select-Object -First 1
+        $found = Get-ChildItem -Path $path -Filter "*.exe" -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "*Image*" -or $_.Name -like "*app*" } | Select-Object -First 1
         if ($found) {
             $exeFile = $found
             Write-Host "Found executable: $($found.FullName)" -ForegroundColor Green

@@ -19,8 +19,7 @@ build_exe_options = {
         "gradio", 
         "gradio_client",
         "PIL", 
-        "numpy", 
-        "pandas",
+        "numpy",
         "uvicorn",
         "fastapi",
         "starlette",
@@ -44,19 +43,6 @@ build_exe_options = {
         "click",
         "h11",
         "markupsafe",
-        "semantic_version",
-        "huggingface_hub",
-        "filelock",
-        "fsspec",
-        "packaging",
-        "pyyaml",
-        "regex",
-        "tokenizers",
-        "tqdm",
-        "transformers",
-        "typer",
-        "rich",
-        "shellingham",
     ],
     "excludes": [
         # Exclude heavy packages to reduce size
@@ -87,14 +73,14 @@ build_exe_options = {
 target = Executable(
     script="app.py",
     base=None,  # Use None for console app, "Win32GUI" for windowed
-    target_name="MoodPaletteGenerator_CXFreeze.exe",
+    target_name="ImagePaletteGenerator_CXFreeze.exe",
     icon=None
 )
 
 setup(
     name="Image Palette Generator",
     version="1.0.0",
-    description="AI-powered image palette generator",
+    description="Image-based color palette generator",
     author="Image Palette Team",
     options={"build_exe": build_exe_options},
     executables=[target]
