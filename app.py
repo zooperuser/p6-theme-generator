@@ -740,7 +740,8 @@ def create_ui(generator: ImagePaletteGenerator):
             }
 
             #visual_panel {
-                gap: 18px;
+             
+                   gap: 18px;
             }
 
             #image_palette_group {
