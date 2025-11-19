@@ -132,7 +132,8 @@ class ImagePaletteGenerator:
         while available and left <= right:
             if left == right:
                 # Center slot: pick the tone closest to the running average for a soft anchor
-                center_vec = lab[list(filter(lambda v: v is not None, positions))].mean(axis=0) if any(p is not None for p in positions) else centres
+                filled_positions = [p for p in positions if p is not None]
+                center_vec = lab[filled_positions].mean(axis=0) if filled_positions else centres
                 offsets = np.linalg.norm(lab[available] - center_vec, axis=1)
                 offsets = offsets + rng.random(len(offsets)) * 0.08
                 offsets = np.maximum(offsets, 0.0)
@@ -354,6 +355,213 @@ class ImagePaletteGenerator:
                     w = np.ones_like(w, dtype=np.float64) / w.size
         return w
 
+    def _filter_colors_by_hue_threshold(self, rgb_colors: list[tuple[int, int, int]], hue_threshold: float = 7.0, target_count: int = 15) -> list[tuple[int, int, int]]:
+        """Filter colors to ensure minimum hue difference between selected colors, always returning target_count.
+        
+        Args:
+            rgb_colors: List of (r, g, b) tuples representing colors
+            hue_threshold: Minimum hue difference in degrees (0-360) between colors (default 7°)
+            target_count: Target number of colors to return
+        
+        Returns:
+            List of filtered (r, g, b) tuples with diverse hues (exactly target_count if possible)
+        """
+        if not rgb_colors:
+            return []
+        
+        # Convert RGB to HSV to get hue values
+        rgb_arr = np.array(rgb_colors, dtype=np.float32)
+        h, s, v = self._rgb_to_hsv_np(rgb_arr)
+        
+        # Filter low saturation colors (grays) separately
+        gray_threshold = 0.1
+        high_sat_mask = s >= gray_threshold
+        low_sat_mask = s < gray_threshold
+        
+        filtered = []
+        selected_hues = []
+        
+        # Calculate how many grays to include (max 2-3)
+        low_sat_indices = np.where(low_sat_mask)[0]
+        gray_count = min(len(low_sat_indices), min(3, target_count // 5))
+        color_target = target_count - gray_count
+        
+        # First, select colors with good saturation using strict threshold
+        high_sat_indices = np.where(high_sat_mask)[0]
+        if len(high_sat_indices) > 0:
+            # Sort by saturation * value for color prominence
+            prominence = (s[high_sat_indices] * v[high_sat_indices])
+            sorted_indices = high_sat_indices[np.argsort(-prominence)]
+            
+            # Try strict threshold first, then progressively relax
+            current_threshold = hue_threshold
+            max_iterations = 5
+            iteration = 0
+            
+            while len(filtered) < color_target and iteration < max_iterations:
+                filtered = []
+                selected_hues = []
+                
+                for idx in sorted_indices:
+                    current_hue = h[idx] * 360  # Convert to degrees
+                    
+                    # Check if this hue is sufficiently different from already selected
+                    is_unique = True
+                    for selected_hue in selected_hues:
+                        # Handle circular hue distance (0-360 wrapping)
+                        hue_diff = abs(current_hue - selected_hue)
+                        hue_diff = min(hue_diff, 360 - hue_diff)
+                        
+                        if hue_diff < current_threshold:
+                            is_unique = False
+                            break
+                    
+                    if is_unique:
+                        filtered.append(rgb_colors[idx])
+                        selected_hues.append(current_hue)
+                        
+                        if len(filtered) >= color_target:
+                            break
+                
+                # If we didn't get enough, relax threshold more aggressively
+                if len(filtered) < color_target:
+                    if iteration == 0:
+                        current_threshold = current_threshold * 0.7  # 30% reduction
+                    elif iteration == 1:
+                        current_threshold = current_threshold * 0.5  # 50% reduction
+                    else:
+                        current_threshold = max(2.0, current_threshold * 0.5)  # Down to minimum 2°
+                    iteration += 1
+                else:
+                    break
+        
+        # Add gray/low-saturation colors
+        if len(low_sat_indices) > 0 and len(filtered) < target_count:
+            # Sort by value (brightness)
+            sorted_gray_indices = low_sat_indices[np.argsort(-v[low_sat_indices])]
+            grays_to_add = min(len(sorted_gray_indices), target_count - len(filtered))
+            for idx in sorted_gray_indices[:grays_to_add]:
+                filtered.append(rgb_colors[idx])
+        
+        # Final fallback: if still not enough, just add remaining candidates
+        if len(filtered) < target_count:
+            used_indices = set()
+            for rgb in filtered:
+                for i, candidate in enumerate(rgb_colors):
+                    if candidate == rgb:
+                        used_indices.add(i)
+                        break
+            
+            remaining_candidates = [rgb_colors[i] for i in range(len(rgb_colors)) if i not in used_indices]
+            needed = target_count - len(filtered)
+            filtered.extend(remaining_candidates[:needed])
+        
+        return filtered[:target_count]
+    
+    def _arrange_colors_to_avoid_similar_hues(self, rgb_colors: list[tuple[int, int, int]], min_separation: int = 3) -> list[tuple[int, int, int]]:
+        """Arrange colors so similar hues are separated by at least min_separation positions.
+        
+        Uses a greedy placement algorithm that ensures minimum distance between similar hues.
+        
+        Args:
+            rgb_colors: List of (r, g, b) tuples
+            min_separation: Minimum number of positions between similar hues (default 3)
+        
+        Returns:
+            Rearranged list of colors
+        """
+        if len(rgb_colors) <= min_separation:
+            return rgb_colors
+        
+        # Convert to HSV
+        rgb_arr = np.array(rgb_colors, dtype=np.float32)
+        h, s, v = self._rgb_to_hsv_np(rgb_arr)
+        hues = h * 360
+        
+        # Separate grays from colors
+        gray_threshold = 0.1
+        colored_items = [(i, hues[i], s[i], v[i]) for i in range(len(rgb_colors)) if s[i] >= gray_threshold]
+        gray_items = [i for i in range(len(rgb_colors)) if s[i] < gray_threshold]
+        
+        if len(colored_items) <= 1:
+            return rgb_colors
+        
+        # Sort colored items by hue
+        colored_items.sort(key=lambda x: x[1])
+        
+        n = len(rgb_colors)
+        result_indices: list[int | None] = [None] * n
+        placed_positions = []
+        
+        # Helper function to calculate minimum distance to similar hues
+        def get_min_distance_to_similar(pos: int, item_hue: float) -> float:
+            """Get minimum circular distance to any similar hue already placed."""
+            if not placed_positions:
+                return float('inf')
+            
+            min_dist = float('inf')
+            for placed_pos, placed_hue in placed_positions:
+                # Check if hues are similar (within 30°)
+                hue_diff = abs(item_hue - placed_hue)
+                hue_diff = min(hue_diff, 360 - hue_diff)
+                
+                if hue_diff < 30:
+                    # Calculate circular position distance
+                    pos_diff = abs(pos - placed_pos)
+                    circular_dist = min(pos_diff, n - pos_diff)
+                    min_dist = min(min_dist, circular_dist)
+            
+            return min_dist
+        
+        # Place colors using greedy algorithm - always pick the position that maximizes
+        # distance from similar hues
+        for item in colored_items:
+            item_idx, item_hue, item_sat, item_val = item
+            
+            best_pos = None
+            best_distance = -1
+            
+            # Try all available positions
+            for pos in range(n):
+                if result_indices[pos] is not None:
+                    continue
+                
+                # Calculate minimum distance to similar hues at this position
+                min_dist = get_min_distance_to_similar(pos, item_hue)
+                
+                # Prefer positions that maximize distance from similar hues
+                # Break ties by preferring evenly distributed positions
+                spread_score = min(pos, n - pos)  # Prefer middle positions
+                score = min_dist * 1000 + spread_score  # Distance is much more important
+                
+                if best_pos is None or score > best_distance:
+                    best_pos = pos
+                    best_distance = score
+            
+            # Place the color at the best position
+            if best_pos is not None:
+                result_indices[best_pos] = item_idx
+                placed_positions.append((best_pos, item_hue))
+        
+        # Fill grays in remaining positions, trying to spread them out
+        gray_positions = [i for i in range(n) if result_indices[i] is None]
+        for pos, gray_idx in zip(gray_positions, gray_items):
+            result_indices[pos] = gray_idx
+        
+        # Build result
+        result = []
+        for idx in result_indices:
+            if idx is not None:
+                result.append(rgb_colors[idx])
+        
+        # Add any remaining items (shouldn't happen, but safety check)
+        placed_set = set(idx for idx in result_indices if idx is not None)
+        for i, rgb in enumerate(rgb_colors):
+            if i not in placed_set:
+                result.append(rgb)
+        
+        return result[:len(rgb_colors)]
+
     def _kmeans_lab(self, lab: np.ndarray, k: int, weights: np.ndarray | None = None, iters: int = 12, rng: np.random.Generator | None = None) -> tuple[np.ndarray, np.ndarray]:
         # lab: (N,3), return (centers(k,3), labels(N))
         N = lab.shape[0]
@@ -437,15 +645,17 @@ class ImagePaletteGenerator:
                     centers[c] = lab[mask].mean(axis=0)
         return centers, labels
 
-    def generate_random_palette_from_image(self, image: Image.Image | None, n_colors: int = 15, seed: int | None = None) -> tuple[str, str, str, str, str, str]:
-        """Generate an image palette using a perceptually-aware, weighted, clustered pipeline.
+    def generate_random_palette_from_image(self, image: Image.Image | None, n_colors: int = 15, seed: int | None = None) -> tuple[str, str, str, str, str, str, str, str]:
+        """Generate an image palette using a perceptually-aware, weighted, clustered pipeline with hue diversity.
 
         Steps:
         - Preprocess: RGB conversion, resize (<=512px max side)
         - Spatial/Perceptual Weights: edges (Sobel), center bias, saturation, mid-value contrast
         - Sampling: probabilistic sampling by weights (grid-free)
-        - Clustering: k-means in CIE LAB (k = n_colors), weighted by sampling probabilities
-        - Output: Hex colors of clusters sorted by total cluster weight
+        - Clustering: k-means in CIE LAB (k = n_colors * 3 to get more candidates), weighted by sampling probabilities
+        - Hue Filtering: Ensure minimum hue distance between selected colors (5-8°)
+        - Smart Arrangement: Position colors to prevent similar hues from being adjacent
+        - Output: Always returns requested number of colors, intelligently arranged
         """
         try:
             n_colors = int(max(1, min(60, n_colors)))
@@ -497,11 +707,13 @@ class ImagePaletteGenerator:
             samp_w = weights[idx]
             samp_lab = self._rgb_to_lab_np(samp_rgb)
 
-            # Cluster
-            centers_lab, labels = self._kmeans_lab(samp_lab, n_colors, weights=samp_w, rng=rng)
+            # Cluster with more centers than requested to get candidates
+            # This gives us more options for hue filtering
+            cluster_count = min(n_colors * 4, len(samp_rgb))
+            centers_lab, labels = self._kmeans_lab(samp_lab, cluster_count, weights=samp_w, rng=rng)
 
             # For output hex, compute centroid in RGB space for each cluster (weighted)
-            hex_colors: list[str] = []
+            rgb_candidates: list[tuple[int, int, int]] = []
             cluster_strengths = []
             for c in range(centers_lab.shape[0]):
                 mask = labels == c
@@ -517,37 +729,36 @@ class ImagePaletteGenerator:
                     mean_rgb = (rgb_pts * w[:, None]).sum(axis=0) / s
                     strength = s
                 r, g, b = [int(np.clip(v, 0, 255)) for v in mean_rgb]
-                hex_colors.append(f"#{r:02X}{g:02X}{b:02X}")
+                rgb_candidates.append((r, g, b))
                 cluster_strengths.append(float(strength))
 
-            # Sort by strength and ensure uniqueness
-            order = np.argsort(-np.array(cluster_strengths)) if cluster_strengths else []
+            # Sort candidates by strength
+            if cluster_strengths:
+                order = np.argsort(-np.array(cluster_strengths))
+                rgb_candidates = [rgb_candidates[i] for i in order]
+            
+            # Apply hue-based filtering with smaller threshold (5-8°)
+            # Adjust threshold: tighter for more colors, looser for fewer
+            hue_threshold = 5.0 if n_colors >= 20 else 7.0 if n_colors >= 10 else 8.0
+            filtered_rgb = self._filter_colors_by_hue_threshold(rgb_candidates, hue_threshold=hue_threshold, target_count=n_colors)
+            
+            # Always try to reach target count
+            if len(filtered_rgb) < n_colors:
+                print(f"[INFO] Returning {len(filtered_rgb)} colors (target: {n_colors}, hue threshold: {hue_threshold}°)")
+            
+            # Arrange colors to prevent similar hues from being adjacent (2-3 positions apart)
+            arranged_rgb = self._arrange_colors_to_avoid_similar_hues(filtered_rgb, min_separation=3)
+            
+            # Convert arranged RGB to hex
             sorted_hex = []
-            seen = set()
-            for i in order:
-                hx = hex_colors[i]
-                if hx not in seen:
-                    sorted_hex.append(hx)
-                    seen.add(hx)
-                if len(sorted_hex) >= n_colors:
-                    break
+            for r, g, b in arranged_rgb:
+                sorted_hex.append(f"#{r:02X}{g:02X}{b:02X}")
 
-            # Fallback: if fewer than requested, pad by distinct frequent pixels
-            if len(sorted_hex) < n_colors:
-                # simple popularity padding from weighted sample
-                packed = (samp_rgb[:, 0].astype(np.uint32) << 16) | (samp_rgb[:, 1].astype(np.uint32) << 8) | samp_rgb[:, 2].astype(np.uint32)
-                # weight-aware counts: approximate by rounding weights
-                order2 = np.argsort(-samp_w)
-                for j in order2:
-                    v = int(packed[j])
-                    hx = f"#{(v >> 16) & 0xFF:02X}{(v >> 8) & 0xFF:02X}{v & 0xFF:02X}"
-                    if hx not in seen:
-                        sorted_hex.append(hx)
-                        seen.add(hx)
-                        if len(sorted_hex) >= n_colors:
-                            break
+            # If we have NO colors (shouldn't happen, but safety check)
+            if not sorted_hex:
+                return "<div class='palette-empty'>Unable to extract distinct colors from image.</div>", "", "", "", "", "", "", ""
 
-            take = sorted_hex[:n_colors]
+            take = sorted_hex
             # Suppress titles to maximize vertical space so all 15 cards fit
             html = self._format_custom_palette(take, title="Color Progression")
             chaotic_html, chaotic_order = self._format_chaotic_palette(take, title="AWESOME PALETTE", rng=rng)
